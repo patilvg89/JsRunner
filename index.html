@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>JavaScript Split View Playground</title>
+  <title>JavaScript Playground</title>
   <style>
     body {
       margin: 0;
@@ -15,6 +16,7 @@
       display: flex;
       flex-direction: column;
     }
+
     .toolbar {
       background-color: #333;
       padding: 10px;
@@ -22,20 +24,40 @@
       justify-content: space-between;
       align-items: center;
     }
+
+    .toolbar-buttons {
+      display: flex;
+      gap: 10px;
+      width: 50%;
+      justify-content: end;
+    }
+
+    .toolbar-buttons-left {
+      display: flex;
+      display: 1 1 0;
+      justify-content: space-between;
+      width: 50%;
+      margin-right: 20px;
+    }
+
     .main {
       display: flex;
       flex: 1;
     }
-    #editorContainer, .output {
+
+    #editorContainer,
+    .output {
       flex: 1;
       height: 100%;
       box-sizing: border-box;
       overflow-y: auto;
     }
+
     #editorContainer {
       background-color: #1e1e1e;
       border-right: 2px solid #333;
     }
+
     .output {
       background-color: #111;
       color: #00ff00;
@@ -43,12 +65,32 @@
       padding: 10px;
       font-family: monospace;
     }
+
+    button {
+      background-color: #555;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    button:hover {
+      background-color: #777;
+    }
   </style>
   <script src="https://unpkg.com/monaco-editor@0.45.0/min/vs/loader.js"></script>
 </head>
+
 <body>
   <div class="toolbar">
-    <span>JavaScript Playground (VSCode Style)</span>
+    <div class="toolbar-buttons-left">
+      <span>Java Script Test</span>
+      <button id="clearEditor">Clear Editor</button>
+    </div>
+    <div class="toolbar-buttons">
+      <button id="clearOutput">Clear Output</button>
+    </div>
   </div>
   <div class="main">
     <div id="editorContainer"></div>
@@ -56,14 +98,17 @@
   </div>
 
   <script>
-    require.config({ paths: { 'vs': 'https://unpkg.com/monaco-editor@0.45.0/min/vs' }});
+    require.config({ paths: { 'vs': 'https://unpkg.com/monaco-editor@0.45.0/min/vs' } });
     require(['vs/editor/editor.main'], function () {
-      const editor = monaco.editor.create(document.getElementById('editorContainer'), {
-        value: `function greet(name) {
+      const defaultCode = `function greet(name) {
   console.log("Hello, " + name);
 }
+greet("Developer");`;
 
-greet("VSCode style");`,
+      const storedCode = localStorage.getItem('jsPlaygroundCode') || defaultCode;
+
+      const editor = monaco.editor.create(document.getElementById('editorContainer'), {
+        value: storedCode,
         language: 'javascript',
         theme: 'vs-dark',
         automaticLayout: true,
@@ -71,11 +116,15 @@ greet("VSCode style");`,
       });
 
       const outputElement = document.getElementById('output');
+      const clearOutputButton = document.getElementById('clearOutput');
+      const clearEditorButton = document.getElementById('clearEditor');
 
       function runCode() {
         outputElement.textContent = '';
 
         const code = editor.getValue();
+        localStorage.setItem('jsPlaygroundCode', code);
+
         const originalLog = console.log;
         const originalError = console.error;
 
@@ -102,8 +151,16 @@ greet("VSCode style");`,
       }
 
       editor.onDidChangeModelContent(runCode);
+      clearOutputButton.addEventListener('click', () => outputElement.textContent = '');
+      clearEditorButton.addEventListener('click', () => {
+        editor.setValue('');
+        localStorage.setItem('jsPlaygroundCode', '');
+        outputElement.textContent = '';
+      });
+
       runCode();
     });
   </script>
 </body>
+
 </html>
