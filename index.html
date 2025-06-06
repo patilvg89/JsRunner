@@ -4,6 +4,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/javascript/javascript-original.svg"
+    type="image/svg+xml">
   <title>JavaScript Playground</title>
   <style>
     body {
@@ -23,6 +25,8 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      border-bottom: 1px solid #444;
+      /* ✅ Add this line */
     }
 
     .toolbar-buttons {
@@ -55,7 +59,7 @@
 
     #editorContainer {
       background-color: #1e1e1e;
-      border-right: 2px solid #333;
+      border-right: 1px solid #333;
     }
 
     .output {
@@ -87,9 +91,16 @@
     <div class="toolbar-buttons-left">
       <span>Java Script Test</span>
       <button id="clearEditor">Clear Editor</button>
+
     </div>
     <div class="toolbar-buttons">
       <button id="clearOutput">Clear Output</button>
+      <button id="toggleTheme" title="Toggle Theme">🌓</button>
+      <label style="display: flex; align-items: center; gap: 5px; font-size: 14px;">
+        <input type="checkbox" id="autoRunToggle" checked />
+        Auto-Run
+      </label>
+      <button id="runButton" style="display: none;">Execute Code</button>
     </div>
   </div>
   <div class="main">
@@ -118,6 +129,12 @@ greet("Developer");`;
       const outputElement = document.getElementById('output');
       const clearOutputButton = document.getElementById('clearOutput');
       const clearEditorButton = document.getElementById('clearEditor');
+      const autoRunToggle = document.getElementById('autoRunToggle');
+      const runButton = document.getElementById('runButton');
+
+      // Load saved auto-run preference or default to true
+      const savedAutoRun = localStorage.getItem('jsPlaygroundAutoRun');
+      autoRunToggle.checked = savedAutoRun === null ? true : savedAutoRun === 'true';
 
       function runCode() {
         outputElement.textContent = '';
@@ -150,16 +167,61 @@ greet("Developer");`;
         console.error = originalError;
       }
 
-      editor.onDidChangeModelContent(runCode);
+      editor.onDidChangeModelContent(() => {
+        if (autoRunToggle.checked) {
+          runCode();
+        }
+      });
       clearOutputButton.addEventListener('click', () => outputElement.textContent = '');
       clearEditorButton.addEventListener('click', () => {
         editor.setValue('');
         localStorage.setItem('jsPlaygroundCode', '');
         outputElement.textContent = '';
       });
+      // autoRunToggle.addEventListener('change', () => {
+      //   localStorage.setItem('jsPlaygroundAutoRun', autoRunToggle.checked);
+      // });
+      function updateRunButtonVisibility() {
+        if (autoRunToggle.checked) {
+          runButton.style.display = 'none';
+        } else {
+          runButton.style.display = 'inline-block';
+        }
+        localStorage.setItem('jsPlaygroundAutoRun', autoRunToggle.checked);
+      }
+      autoRunToggle.addEventListener('change', updateRunButtonVisibility);
+      updateRunButtonVisibility(); // Call on page load
+      runButton.addEventListener('click', () => {
+        runCode();
+      });
+
+      // Theme Toggle
+      const toggleThemeButton = document.getElementById('toggleTheme');
+      let currentTheme = localStorage.getItem('jsPlaygroundTheme') || 'vs-dark';
+
+      function applyTheme(theme) {
+        monaco.editor.setTheme(theme);
+        document.body.style.backgroundColor = (theme === 'vs-dark') ? '#1e1e1e' : '#ffffff';
+        document.body.style.color = (theme === 'vs-dark') ? '#f0f0f0' : '#000000';
+        document.querySelector('.output').style.backgroundColor = (theme === 'vs-dark') ? '#111' : '#f5f5f5';
+        document.querySelector('.output').style.color = (theme === 'vs-dark') ? '#00ff00' : '#006400';
+
+        //toolbar bg
+        document.querySelector('.toolbar').style.backgroundColor = (theme === 'vs-dark') ? '#111' : '#f5f5f5';
+        document.querySelector('.toolbar').style.color = (theme === 'vs-dark') ? '#00ff00' : '#006400';
+      }
+
+      applyTheme(currentTheme);
+
+      toggleThemeButton.addEventListener('click', () => {
+        currentTheme = (currentTheme === 'vs-dark') ? 'vs' : 'vs-dark';
+        localStorage.setItem('jsPlaygroundTheme', currentTheme);
+        applyTheme(currentTheme);
+      });
 
       runCode();
     });
+
   </script>
 </body>
 
