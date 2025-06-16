@@ -88,8 +88,9 @@
 <body>
   <div class="toolbar">
     <div class="toolbar-buttons-left">
-      <span>Script Test Playground</span>
+      <span>Java Script Test</span>
       <button id="clearEditor">Clear Editor</button>
+
 
     </div>
     <div class="toolbar-buttons">
@@ -100,6 +101,10 @@
         Auto-Run
       </label>
       <button id="runButton" style="display: none;">Execute Code</button>
+      <label style="display: flex; align-items: center; gap: 5px; font-size: 14px;">
+        <input type="checkbox" id="wordWrapEnable" checked />
+        WordWrap
+      </label>
     </div>
   </div>
   <div class="main">
@@ -122,18 +127,33 @@ greet("Developer");`;
         language: 'javascript',
         theme: 'vs-dark',
         automaticLayout: true,
-        fontSize: 14
+        fontSize: 14,
+        wordWrap: 'on'
       });
 
       const outputElement = document.getElementById('output');
       const clearOutputButton = document.getElementById('clearOutput');
       const clearEditorButton = document.getElementById('clearEditor');
       const autoRunToggle = document.getElementById('autoRunToggle');
+      const wordWrapEnable = document.getElementById('wordWrapEnable');
       const runButton = document.getElementById('runButton');
 
       // Load saved auto-run preference or default to true
       const savedAutoRun = localStorage.getItem('jsPlaygroundAutoRun');
       autoRunToggle.checked = savedAutoRun === null ? true : savedAutoRun === 'true';
+      // Load saved word wrap preference or default to true
+      const savedWordWrap = localStorage.getItem('jsPlaygroundWordWrap');
+      wordWrapEnable.checked = savedWordWrap === null ? true : savedWordWrap === 'false';
+      wordWrapEnable.addEventListener('change', () => {
+        editor.updateOptions({ wordWrap: wordWrapEnable.checked ? 'on' : 'off' });
+        if (wordWrapEnable.checked) {
+          outputElement.style.wordBreak = 'break-word';
+        } else {
+          outputElement.style.wordBreak = 'normal';
+        }
+        localStorage.setItem('jsPlaygroundWordWrap', wordWrapEnable.checked);
+      });
+      editor.updateOptions({ wordWrap: wordWrapEnable.checked ? 'on' : 'off' });
 
       function runCode() {
         outputElement.textContent = '';
