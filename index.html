@@ -120,6 +120,43 @@
       background-color: rgba(255, 0, 0, 0.1);
       border-left: 2px solid red;
     }
+
+    .history-entry button {
+      background-color: #444;
+      color: white;
+      border: none;
+      margin-left: 4px;
+      padding: 2px 6px;
+      cursor: pointer;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+
+    .history-entry button:hover {
+      background-color: #666;
+    }
+
+    .history-entry small {
+      display: block;
+      color: #888;
+      font-size: 11px;
+    }
+
+    .copyBtn {
+      background-color: #444;
+      color: white;
+      border: none;
+      cursor: pointer;
+      border-radius: 4px;
+      pointer-events: auto;
+      /* required if parent disables it */
+    }
+
+    .copyBtn:hover {
+      background-color: #666;
+      pointer-events: auto;
+      /* required if parent disables it */
+    }
   </style>
   <script src="https://unpkg.com/monaco-editor@0.45.0/min/vs/loader.js"></script>
 </head>
@@ -127,21 +164,26 @@
 <body>
   <div class="toolbar">
     <div class="toolbar-buttons-left">
-      <span>Java Script Test</span>
-      <button id="clearEditor">Clear Editor</button>
+      <span>JavaScript Playground</span>
+      <div>
+        <button id="saveCodeSnapshot" title="Save Code" style="background: transparent;">💾</button>
+        <button id="clearEditor">Clear Editor</button>
+      </div>
     </div>
     <div class="toolbar-buttons">
-      <button id="clearOutput">Clear Output</button>
-      <button id="toggleTheme" title="Toggle Theme">🌓</button>
+
+      <button id="toggleTheme" title="Toggle Theme" style="background: transparent;">🌓</button>
+      <button id="toggleCodeHistory" title="Code History" style="background: transparent;">📜</button>
+      <label style="display: flex; align-items: center; gap: 5px; font-size: 14px;">
+        <input type="checkbox" id="wordWrapEnable" checked />
+        WordWrap
+      </label>
       <label style="display: flex; align-items: center; gap: 5px; font-size: 14px;">
         <input type="checkbox" id="autoRunToggle" checked />
         Auto-Run
       </label>
       <button id="runButton" style="display: none;">Execute Code</button>
-      <label style="display: flex; align-items: center; gap: 5px; font-size: 14px;">
-        <input type="checkbox" id="wordWrapEnable" checked />
-        WordWrap
-      </label>
+      <button id="clearOutput">Clear Output</button>
     </div>
   </div>
   <div class="main">
@@ -149,6 +191,11 @@
     <div class="output" id="output">
       <div class="output-gutter" id="outputGutter"></div>
       <div class="output-content" id="outputContent"></div>
+    </div>
+    <div id="codeHistoryPanel"
+      style="display: none; background: #222; color: #fff; padding: 10px; overflow-y: auto; min-width: 20%; max-width: 20%;">
+      <h3>History</h3>
+      <ul id="codeHistoryList" style="list-style: none; padding-left: 0;"></ul>
     </div>
   </div>
 
@@ -198,6 +245,21 @@ greet("Developer");`;
       });
       editor.updateOptions({ wordWrap: wordWrapEnable.checked ? 'on' : 'off' });
 
+      document.getElementById('toggleCodeHistory').addEventListener('click', () => {
+        const panel = document.getElementById('codeHistoryPanel');
+        const visible = panel.style.display !== 'none';
+        panel.style.display = visible ? 'none' : 'block';
+        if (!visible) renderCodeHistory();
+      });
+
+      document.getElementById('saveCodeSnapshot').addEventListener('click', () => {
+        const name = prompt('Enter a name for this snapshot:');
+        if (!name) return;
+        const code = editor.getValue();
+        saveCodeSnapshot(name, code);
+        alert(`Snapshot "${name}" saved.`);
+      });
+
       function printToOutput(text, isError = false) {
         const lines = text.toString().split('\n');
         lines.forEach(line => {
@@ -212,7 +274,7 @@ greet("Developer");`;
           }
 
           lineDiv.addEventListener('click', () => {
-            console.log(`Clicked line ${lineNumber}:`, line);
+            // console.log(`Clicked line ${lineNumber}:`, line);
             lineDiv.classList.toggle('selected');
           });
 
@@ -287,6 +349,88 @@ greet("Developer");`;
       runButton.addEventListener('click', () => {
         runCode();
       });
+
+      //History Management
+      const codeHistoryKey = 'jsPlaygroundCodeHistory';
+
+      function getCodeHistory() {
+        const raw = localStorage.getItem(codeHistoryKey);
+        return raw ? JSON.parse(raw) : [];
+      }
+
+      function saveCodeSnapshot(name, code) {
+        const history = getCodeHistory();
+        history.unshift({
+          name,
+          code,
+          timestamp: new Date().toISOString()
+        });
+        localStorage.setItem(codeHistoryKey, JSON.stringify(history.slice(0, 50))); // limit to 50
+      }
+
+      function renderCodeHistory() {
+        const list = document.getElementById('codeHistoryList');
+        const history = getCodeHistory();
+        list.innerHTML = '';
+
+        history.forEach((entry, i) => {
+          const li = document.createElement('li');
+          li.className = 'history-entry';
+          li.innerHTML = `
+          <div style="border: 1px solid #444; padding: 5px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <strong>${entry.name}</strong>
+          <div>
+            <button class="copyBtn" title="Copy Code" data-index="${i}">📋</button>
+            <button class="renameBtn" title="Rename Snapshot" data-index="${i}">📝</button>
+            <button class="deleteBtn" title="Delete Snapshot" data-index="${i}">❌</button>
+          </div>
+        </div>
+        <small>${new Date(entry.timestamp).toLocaleString()}</small>
+        <pre style="white-space: pre-wrap; max-height: 40px; overflow-y: auto; font-size: 11px;">${entry.code.slice(0, 200)}</pre>
+        </div>
+      `;
+
+          li.addEventListener('click', () => {
+            if (confirm(`Load snapshot "${entry.name}"?`)) {
+              editor.setValue(entry.code);
+              localStorage.setItem('jsPlaygroundCode', entry.code);
+            }
+          });
+          list.appendChild(li);
+
+          // Copy
+          li.querySelector('.copyBtn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            navigator.clipboard.writeText(entry.code)
+              .then(() => alert(`Code "${entry.name}" copied to clipboard!`))
+              .catch(err => console.error('Clipboard copy failed', err));
+          });
+
+          // Rename
+          li.querySelector('.renameBtn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            const newName = prompt('Enter new name:', entry.name);
+            if (newName && newName !== entry.name) {
+              const history = getCodeHistory();
+              history[i].name = newName;
+              localStorage.setItem(codeHistoryKey, JSON.stringify(history));
+              renderCodeHistory();
+            }
+          });
+
+          // Delete
+          li.querySelector('.deleteBtn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (confirm(`Delete snapshot "${entry.name}"?`)) {
+              const history = getCodeHistory();
+              history.splice(i, 1);
+              localStorage.setItem(codeHistoryKey, JSON.stringify(history));
+              renderCodeHistory();
+            }
+          });
+        });
+      }
 
       // Theme Toggle
       const toggleThemeButton = document.getElementById('toggleTheme');
