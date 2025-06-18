@@ -102,6 +102,19 @@
     button:hover {
       background-color: #777;
     }
+
+    .clickable-line {
+      cursor: pointer;
+      padding: 2px 0;
+    }
+
+    .clickable-line:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .clickable-line.selected {
+      background-color: rgba(0, 255, 0, 0.2);
+    }
   </style>
   <script src="https://unpkg.com/monaco-editor@0.45.0/min/vs/loader.js"></script>
 </head>
@@ -111,8 +124,6 @@
     <div class="toolbar-buttons-left">
       <span>Java Script Test</span>
       <button id="clearEditor">Clear Editor</button>
-
-
     </div>
     <div class="toolbar-buttons">
       <button id="clearOutput">Clear Output</button>
@@ -160,6 +171,8 @@ greet("Developer");`;
       const autoRunToggle = document.getElementById('autoRunToggle');
       const wordWrapEnable = document.getElementById('wordWrapEnable');
       const runButton = document.getElementById('runButton');
+      const outputContent = document.getElementById('outputContent');
+      const outputGutter = document.getElementById('outputGutter');
 
       // Load saved auto-run preference or default to true
       const savedAutoRun = localStorage.getItem('jsPlaygroundAutoRun');
@@ -168,9 +181,8 @@ greet("Developer");`;
       const savedWordWrap = localStorage.getItem('jsPlaygroundWordWrap');
       wordWrapEnable.checked = savedWordWrap === null ? true : savedWordWrap === 'true';
 
+      // show output view 
       function updateWordWrap() {
-        console.log('updateWordWrap', wordWrapEnable.checked);
-
         outputContent.style.wordBreak = wordWrapEnable.checked ? 'break-word' : 'normal';
         outputContent.style.overflowWrap = wordWrapEnable.checked ? 'break-word' : 'normal';
       }
@@ -181,10 +193,6 @@ greet("Developer");`;
       });
       editor.updateOptions({ wordWrap: wordWrapEnable.checked ? 'on' : 'off' });
 
-      // show output view 
-      const outputContent = document.getElementById('outputContent');
-      const outputGutter = document.getElementById('outputGutter');
-
       function printToOutput(text) {
         const lines = text.toString().split('\n');
         lines.forEach(line => {
@@ -193,6 +201,11 @@ greet("Developer");`;
 
           const lineDiv = document.createElement('div');
           lineDiv.textContent = line;
+          lineDiv.classList.add('clickable-line');
+          lineDiv.addEventListener('click', () => {
+            // console.log(`Clicked line ${lineNumber}:`, line);
+            lineDiv.classList.toggle('selected');
+          });
           outputContent.appendChild(lineDiv);
 
           const gutterDiv = document.createElement('div');
