@@ -115,6 +115,11 @@
     .clickable-line.selected {
       background-color: rgba(0, 255, 0, 0.2);
     }
+
+    .error-line {
+      background-color: rgba(255, 0, 0, 0.1);
+      border-left: 2px solid red;
+    }
   </style>
   <script src="https://unpkg.com/monaco-editor@0.45.0/min/vs/loader.js"></script>
 </head>
@@ -193,7 +198,7 @@ greet("Developer");`;
       });
       editor.updateOptions({ wordWrap: wordWrapEnable.checked ? 'on' : 'off' });
 
-      function printToOutput(text) {
+      function printToOutput(text, isError = false) {
         const lines = text.toString().split('\n');
         lines.forEach(line => {
           if (line === '' && outputContent.children.length === 0) return; // skip first empty
@@ -202,10 +207,15 @@ greet("Developer");`;
           const lineDiv = document.createElement('div');
           lineDiv.textContent = line;
           lineDiv.classList.add('clickable-line');
+          if (isError || line.toLowerCase().startsWith('error:') || line.toLowerCase().startsWith('exception:')) {
+            lineDiv.classList.add('error-line');
+          }
+
           lineDiv.addEventListener('click', () => {
-            // console.log(`Clicked line ${lineNumber}:`, line);
+            console.log(`Clicked line ${lineNumber}:`, line);
             lineDiv.classList.toggle('selected');
           });
+
           outputContent.appendChild(lineDiv);
 
           const gutterDiv = document.createElement('div');
@@ -233,13 +243,13 @@ greet("Developer");`;
 
         console.error = (...args) => {
           const line = args.map(arg => 'Error: ' + String(arg)).join(' ');
-          printToOutput(line);
+          printToOutput(line, true);
         };
 
         try {
           new Function(code)();
         } catch (err) {
-          printToOutput('Exception: ' + err.message);
+          printToOutput('Exception: ' + err.message, true);
         }
 
         console.log = originalLog;
