@@ -164,11 +164,26 @@ greet("Developer");`;
         const originalLog = console.log;
         const originalError = console.error;
 
+        // console.log = (...args) => {
+        //   args.forEach(arg => {
+        //     outputElement.textContent += arg + '\n';
+        //   });
+        // };
+        // console.log = (...args) => {
+        //   args.forEach(arg => {
+        //     if (typeof arg === 'object') {
+        //       outputElement.textContent += JSON.stringify(arg, null, 0) + '\n';
+        //     } else {
+        //       outputElement.textContent += arg + '\n';
+        //     }
+        //   });
+        // };
         console.log = (...args) => {
-          args.forEach(arg => {
-            outputElement.textContent += arg + '\n';
-          });
+          outputElement.textContent += args.map(arg =>
+            typeof arg === 'object' ? JSON.stringify(arg, null, 0) : String(arg)
+          ).join(' ') + '\n';
         };
+
 
         console.error = (...args) => {
           args.forEach(arg => {
