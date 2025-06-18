@@ -25,7 +25,6 @@
       justify-content: space-between;
       align-items: center;
       border-bottom: 1px solid #444;
-      /* ✅ Add this line */
     }
 
     .toolbar-buttons {
@@ -46,6 +45,9 @@
     .main {
       display: flex;
       flex: 1;
+      overflow: hidden;
+      /* 👈 block any overflow */
+      max-width: 100%;
     }
 
     #editorContainer,
@@ -62,11 +64,30 @@
     }
 
     .output {
+      display: flex;
       background-color: #111;
       color: #00ff00;
-      white-space: pre-wrap;
-      padding: 10px;
       font-family: monospace;
+      font-size: 14px;
+      overflow-y: auto;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      max-width: 100%;
+    }
+
+    .output-gutter {
+      /* background-color: #222; */
+      color: #888;
+      padding: 10px 5px;
+      text-align: right;
+      user-select: none;
+      white-space: nowrap;
+    }
+
+    .output-content {
+      padding: 10px;
+      flex: 1;
+      min-width: 0;
     }
 
     button {
@@ -109,7 +130,10 @@
   </div>
   <div class="main">
     <div id="editorContainer"></div>
-    <div class="output" id="output"></div>
+    <div class="output" id="output">
+      <div class="output-gutter" id="outputGutter"></div>
+      <div class="output-content" id="outputContent"></div>
+    </div>
   </div>
 
   <script>
@@ -131,7 +155,6 @@ greet("Developer");`;
         wordWrap: 'on'
       });
 
-      const outputElement = document.getElementById('output');
       const clearOutputButton = document.getElementById('clearOutput');
       const clearEditorButton = document.getElementById('clearEditor');
       const autoRunToggle = document.getElementById('autoRunToggle');
@@ -143,20 +166,44 @@ greet("Developer");`;
       autoRunToggle.checked = savedAutoRun === null ? true : savedAutoRun === 'true';
       // Load saved word wrap preference or default to true
       const savedWordWrap = localStorage.getItem('jsPlaygroundWordWrap');
-      wordWrapEnable.checked = savedWordWrap === null ? true : savedWordWrap === 'false';
+      wordWrapEnable.checked = savedWordWrap === null ? true : savedWordWrap === 'true';
+
+      function updateWordWrap() {
+        console.log('updateWordWrap', wordWrapEnable.checked);
+
+        outputContent.style.wordBreak = wordWrapEnable.checked ? 'break-word' : 'normal';
+        outputContent.style.overflowWrap = wordWrapEnable.checked ? 'break-word' : 'normal';
+      }
       wordWrapEnable.addEventListener('change', () => {
         editor.updateOptions({ wordWrap: wordWrapEnable.checked ? 'on' : 'off' });
-        if (wordWrapEnable.checked) {
-          outputElement.style.wordBreak = 'break-word';
-        } else {
-          outputElement.style.wordBreak = 'normal';
-        }
         localStorage.setItem('jsPlaygroundWordWrap', wordWrapEnable.checked);
+        updateWordWrap()
       });
       editor.updateOptions({ wordWrap: wordWrapEnable.checked ? 'on' : 'off' });
 
+      // show output view 
+      const outputContent = document.getElementById('outputContent');
+      const outputGutter = document.getElementById('outputGutter');
+
+      function printToOutput(text) {
+        const lines = text.toString().split('\n');
+        lines.forEach(line => {
+          if (line === '' && outputContent.children.length === 0) return; // skip first empty
+          const lineNumber = outputContent.children.length + 1;
+
+          const lineDiv = document.createElement('div');
+          lineDiv.textContent = line;
+          outputContent.appendChild(lineDiv);
+
+          const gutterDiv = document.createElement('div');
+          gutterDiv.textContent = lineNumber;
+          outputGutter.appendChild(gutterDiv);
+        });
+      }
+
       function runCode() {
-        outputElement.textContent = '';
+        outputContent.innerHTML = '';
+        outputGutter.innerHTML = '';
 
         const code = editor.getValue();
         localStorage.setItem('jsPlaygroundCode', code);
@@ -164,37 +211,22 @@ greet("Developer");`;
         const originalLog = console.log;
         const originalError = console.error;
 
-        // console.log = (...args) => {
-        //   args.forEach(arg => {
-        //     outputElement.textContent += arg + '\n';
-        //   });
-        // };
-        // console.log = (...args) => {
-        //   args.forEach(arg => {
-        //     if (typeof arg === 'object') {
-        //       outputElement.textContent += JSON.stringify(arg, null, 0) + '\n';
-        //     } else {
-        //       outputElement.textContent += arg + '\n';
-        //     }
-        //   });
-        // };
         console.log = (...args) => {
-          outputElement.textContent += args.map(arg =>
+          const line = args.map(arg =>
             typeof arg === 'object' ? JSON.stringify(arg, null, 0) : String(arg)
-          ).join(' ') + '\n';
+          ).join(' ');
+          printToOutput(line);
         };
 
-
         console.error = (...args) => {
-          args.forEach(arg => {
-            outputElement.textContent += 'Error: ' + arg + '\n';
-          });
+          const line = args.map(arg => 'Error: ' + String(arg)).join(' ');
+          printToOutput(line);
         };
 
         try {
           new Function(code)();
         } catch (err) {
-          outputElement.textContent += 'Exception: ' + err.message + '\n';
+          printToOutput('Exception: ' + err.message);
         }
 
         console.log = originalLog;
@@ -206,15 +238,18 @@ greet("Developer");`;
           runCode();
         }
       });
-      clearOutputButton.addEventListener('click', () => outputElement.textContent = '');
+
+      clearOutputButton.addEventListener('click', () => {
+        outputContent.innerHTML = '';
+        outputGutter.innerHTML = '';
+      });
       clearEditorButton.addEventListener('click', () => {
         editor.setValue('');
         localStorage.setItem('jsPlaygroundCode', '');
-        outputElement.textContent = '';
+        outputContent.innerHTML = '';
+        outputGutter.innerHTML = '';
       });
-      // autoRunToggle.addEventListener('change', () => {
-      //   localStorage.setItem('jsPlaygroundAutoRun', autoRunToggle.checked);
-      // });
+
       function updateRunButtonVisibility() {
         if (autoRunToggle.checked) {
           runButton.style.display = 'none';
@@ -225,6 +260,7 @@ greet("Developer");`;
       }
       autoRunToggle.addEventListener('change', updateRunButtonVisibility);
       updateRunButtonVisibility(); // Call on page load
+      updateWordWrap(); // Call on page load
       runButton.addEventListener('click', () => {
         runCode();
       });
